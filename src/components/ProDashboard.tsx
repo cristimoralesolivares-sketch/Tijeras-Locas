@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   TrendingUp, 
@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { SERVICES, BARBERS, WORK_HOURS, DAYS_OF_WEEK } from '../data';
 import { Appointment, User as UserType, Service } from '../types';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { getSupabaseAppointments, updateSupabaseAppointmentStatus } from '../supabaseHelpers';
 
 interface ProDashboardProps {
   currentUser: UserType;
@@ -58,15 +60,68 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
     }
   };
 
-  // Change status of a specific appointment
-  const handleUpdateStatus = (id: string, newStatus: 'completed' | 'no-show' | 'cancelled' | 'pending') => {
-    const updated = appointments.map(apt => {
-      if (apt.id === id) {
-        return { ...apt, status: newStatus };
+  // Real-time listener for Supabase inserts / updates
+  useEffect(() => {
+    const refreshData = async () => {
+      try {
+        const fresh = await getSupabaseAppointments();
+        if (fresh && fresh.length > 0) {
+          // Merge Supabase items with initial/local items if needed, or simply replace/combine!
+          // Since we want to preserve mock records for a perfect demo but layer in real DB records instantly,
+          // we merge them. Any appointment with a string id starting with "apt-" is local mock data.
+          const dbIds = new Set(fresh.map((f) => String(f.id)));
+          const legacy = appointments.filter((a) => a.id.startsWith('apt-') && !dbIds.has(a.id));
+          
+          onUpdateAppointments([...fresh, ...legacy]);
+        }
+      } catch (err) {
+        console.error('Error loading Supabase data:', err);
       }
-      return apt;
-    });
-    onUpdateAppointments(updated);
+    };
+
+    // Run initial load
+    refreshData();
+
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    // Listen to real-time events on appointments table
+    const channel = supabase
+      .channel('app_realtime_appointments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          console.log('Realtime change received in Dashboard:', payload);
+          refreshData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Change status of a specific appointment
+  const handleUpdateStatus = async (id: string, newStatus: 'completed' | 'no-show' | 'cancelled' | 'pending') => {
+    try {
+      const isDbId = !isNaN(Number(id)) || !id.startsWith('apt-');
+      if (isDbId) {
+        await updateSupabaseAppointmentStatus(id, newStatus);
+      }
+      const updated = appointments.map(apt => {
+        if (apt.id === id) {
+          return { ...apt, status: newStatus };
+        }
+        return apt;
+      });
+      onUpdateAppointments(updated);
+    } catch (err: any) {
+      console.error('Error updating status in Supabase:', err);
+      alert(`No se pudo actualizar el estado de la cita en Supabase: ${err.message || err}`);
+    }
   };
 
   // Filter appointments according to user rights

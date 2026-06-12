@@ -23,6 +23,8 @@ import {
 import { SERVICES, BARBERS, WORK_HOURS, DAYS_OF_WEEK } from '../data';
 import { Service, ServiceCategory, Appointment, User as UserType } from '../types';
 import { BarberMap } from './BarberMap';
+import { supabase } from '../supabaseClient';
+import { insertSupabaseAppointment, updateSupabaseAppointmentStatus } from '../supabaseHelpers';
 
 interface ClientBookingProps {
   currentUser: UserType;
@@ -41,6 +43,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
   const [activeTab, setActiveTab] = useState<'book' | 'history' | 'contact'>('book');
 
   // Booking Flow States
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string>('Andrés');
   const [selectedDay, setSelectedDay] = useState<string>('2026-06-11'); // Initial to Thursday June 11, 2026
@@ -73,7 +76,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
   const occupiedSlots = getOccupiedSlots();
 
   // Handle final agenda registration
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService || !selectedTime) return;
 
@@ -85,72 +88,125 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
       return;
     }
 
-    if (reschedulingAppointmentId) {
-      // It was a reschedule action!
-      const updated = appointments.map(apt => {
-        if (apt.id === reschedulingAppointmentId) {
-          return {
-            ...apt,
-            service: selectedService,
-            professional: selectedBarber,
-            date: selectedDay,
-            time: selectedTime,
-            totalPrice: selectedService.price
-          };
+    setIsLoading(true);
+    try {
+      if (reschedulingAppointmentId) {
+        // It was a reschedule action!
+        const isDbId = !isNaN(Number(reschedulingAppointmentId)) || !reschedulingAppointmentId.startsWith('apt-');
+
+        let updatedApt: Appointment | null = null;
+        const updated = appointments.map((apt) => {
+          if (apt.id === reschedulingAppointmentId) {
+            updatedApt = {
+              ...apt,
+              service: selectedService,
+              professional: selectedBarber,
+              date: selectedDay,
+              time: selectedTime,
+              totalPrice: selectedService.price
+            };
+            return updatedApt;
+          }
+          return apt;
+        });
+
+        if (isDbId) {
+          // Send update to Supabase matching expected columns
+          const { error } = await supabase
+            .from('appointments')
+            .update({
+              servicio: selectedService.name,
+              barbero: selectedBarber,
+              fecha_hora: `${selectedDay} ${selectedTime}`,
+              estado: 'pending'
+            })
+            .eq('id', Number(reschedulingAppointmentId));
+
+          if (error) {
+            throw new Error(error.message);
+          }
         }
-        return apt;
-      });
-      onUpdateAppointments(updated);
-      setReschedulingAppointmentId(null);
-      
-      const rescheduledApt = updated.find(a => a.id === reschedulingAppointmentId);
-      if (rescheduledApt) {
-        setSuccessAppointment(rescheduledApt);
+
+        onUpdateAppointments(updated);
+        setReschedulingAppointmentId(null);
+
+        if (updatedApt) {
+          setSuccessAppointment(updatedApt);
+          setIsSuccessSummary(true);
+        }
+
+        // Reset state
+        setSelectedService(null);
+        setSelectedTime(null);
+      } else {
+        // It is a brand new booking
+        const newAptData = {
+          clientName: currentUser.name,
+          clientPhone: currentUser.phone,
+          clientEmail: currentUser.email,
+          service: selectedService,
+          date: selectedDay,
+          time: selectedTime,
+          professional: selectedBarber,
+          status: 'pending' as const,
+          totalPrice: selectedService.price
+        };
+
+        // Insert real record into Supabase!
+        const savedApt = await insertSupabaseAppointment(newAptData);
+
+        if (savedApt) {
+          onBookingComplete(savedApt);
+          setSuccessAppointment(savedApt);
+        } else {
+          // Decoupled local state fallback in case of connection limits or warning
+          const fallbackApt: Appointment = {
+            id: `apt-${Math.floor(Math.random() * 90000) + 10000}`,
+            ...newAptData
+          };
+          onBookingComplete(fallbackApt);
+          setSuccessAppointment(fallbackApt);
+        }
         setIsSuccessSummary(true);
+
+        // Reset selection
+        setSelectedService(null);
+        setSelectedTime(null);
       }
-      
-      // Reset state
-      setSelectedService(null);
-      setSelectedTime(null);
-    } else {
-      // It is a brand new booking
-      const newApt: Appointment = {
-        id: `apt-${Math.floor(Math.random() * 90000) + 10000}`,
-        clientName: currentUser.name,
-        clientPhone: currentUser.phone,
-        clientEmail: currentUser.email,
-        service: selectedService,
-        date: selectedDay,
-        time: selectedTime,
-        professional: selectedBarber,
-        status: 'pending',
-        totalPrice: selectedService.price
-      };
-
-      onBookingComplete(newApt);
-      setSuccessAppointment(newApt);
-      setIsSuccessSummary(true);
-
-      // Reset selection
-      setSelectedService(null);
-      setSelectedTime(null);
+    } catch (err: any) {
+      console.error('Error reserving:', err);
+      alert(`Ocurrió un error al registrar la cita en la base de datos: ${err.message || err}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Filter appointments for active history
   const myAppointments = appointments.filter(
-    apt => apt.clientEmail.toLowerCase() === currentUser.email.toLowerCase()
+    (apt) => apt.clientEmail.toLowerCase() === currentUser.email.toLowerCase()
   );
 
-  const handleCancelAppointment = (id: string) => {
+  const handleCancelAppointment = async (id: string) => {
     if (window.confirm('¿Estás seguro de que deseas cancelar esta cita?')) {
-      const updated = appointments.map(apt => {
-        if (apt.id === id) {
-          return { ...apt, status: 'cancelled' as const };
+      setIsLoading(true);
+      try {
+        const isDbId = !isNaN(Number(id)) || !id.startsWith('apt-');
+        if (isDbId) {
+          await updateSupabaseAppointmentStatus(id, 'cancelled');
         }
-        return apt;
-      });
-      onUpdateAppointments(updated);
+        const updated = appointments.map((apt) => {
+          if (apt.id === id) {
+            return { ...apt, status: 'cancelled' as const };
+          }
+          return apt;
+        });
+        onUpdateAppointments(updated);
+      } catch (err: any) {
+        console.error('Error cancelling appointment:', err);
+        alert(`Ocurrió un error al cancelar en la base de datos: ${err.message || err}`);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 

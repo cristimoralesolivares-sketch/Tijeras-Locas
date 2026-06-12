@@ -30,6 +30,7 @@ import { ProDashboard } from './components/ProDashboard';
 import { ClientBooking } from './components/ClientBooking';
 import { Appointment, User as UserType } from './types';
 import { INITIAL_APPOINTMENTS } from './data';
+import { getSupabaseAppointments } from './supabaseHelpers';
 
 export default function App() {
   // Shared appointments state backed by localStorage
@@ -128,6 +129,25 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('tijeras_locas_appointments', JSON.stringify(appointments));
   }, [appointments]);
+
+  // Load initial appointments from Supabase on mount
+  useEffect(() => {
+    const fetchRealDbAppointments = async () => {
+      try {
+        const fresh = await getSupabaseAppointments();
+        if (fresh && fresh.length > 0) {
+          setAppointments(prev => {
+            const dbIds = new Set(fresh.map((f) => String(f.id)));
+            const legacy = prev.filter((a) => a.id.startsWith('apt-') && !dbIds.has(a.id));
+            return [...fresh, ...legacy];
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching Supabase data on mount:', err);
+      }
+    };
+    fetchRealDbAppointments();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('tijeras_locas_users_db', JSON.stringify(users));
