@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6; /* Vibrant Indigo / Purple */
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-brand-950: #2e1065;
+
+  --color-violet-brand: #7c3aed;
+  --color-custom-bg: #f8fafc;
+}
+
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Frosted GLASS in Light Mode (Pure White frosted pane, subtle border and light soft shadow) */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.82);
+  box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.12), 0 2px 8px -1px rgba(148, 163, 184, 0.08);
+}
+
+.glass-premium {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.brand-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.06), 0 0 10px rgba(99, 102, 241, 0.03);
+}
+
+.glow-brand {
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.15);
+}
+
+.glow-brand-hover:hover {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+  border-color: #6366f1;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+@keyframes pulse-brand {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    transform: scale(1.015);
+    box-shadow: 0 0 10px 3px rgba(99, 102, 241, 0.1);
+  }
+}
+
+.animate-pulse-brand {
+  animation: pulse-brand 2s infinite;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Tijeras Locas",
+  "description": "Sistema integral de gestión de turnos, agenda para barberos y dashboard de BI para la barbería del barrio universitario Tijeras Locas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
