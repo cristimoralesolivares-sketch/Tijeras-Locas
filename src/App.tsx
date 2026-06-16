@@ -24,8 +24,7 @@ import {
   Flame,
   CheckCircle,
   Eye,
-  EyeOff,
-  Database
+  EyeOff
 } from 'lucide-react';
 import { ProDashboard } from './components/ProDashboard';
 import { ClientBooking } from './components/ClientBooking';
@@ -256,47 +255,6 @@ export default function App() {
     triggerNotification('Sesión finalizada correctamente.', 'info');
   };
 
-  // Quick Demo Access Selector with ZERO plain text passwords
-  const handleQuickDemoAccess = (role: 'client' | 'cr7' | 'messi' | 'andres') => {
-    if (role === 'andres') {
-      setCurrentUser({
-        id: 'demo-andres',
-        name: 'Andrés (Admin)',
-        email: 'andres@tijeraslocas.cl',
-        phone: '+56911112222',
-        role: 'admin',
-      });
-      triggerNotification('Simulando a Andrés (Dueño/Administrador) con acceso total.', 'success');
-    } else if (role === 'cr7') {
-      setCurrentUser({
-        id: 'demo-lissy',
-        name: 'Lissy',
-        email: 'lissy@tijeraslocas.cl',
-        phone: '+56994151797',
-        role: 'barbero',
-      });
-      triggerNotification('Simulando a Lissy (Staff Barbera).', 'success');
-    } else if (role === 'messi') {
-      setCurrentUser({
-        id: 'demo-meylin',
-        name: 'Meylin',
-        email: 'meylin@tijeraslocas.cl',
-        phone: '+56971088802',
-        role: 'barbero',
-      });
-      triggerNotification('Simulando a Meylin (Staff Barbera).', 'success');
-    } else {
-      setCurrentUser({
-        id: 'demo-gaston',
-        name: 'Gastón S.',
-        email: 'gaston@correo.cl',
-        phone: '+56988882222',
-        role: 'cliente',
-      });
-      triggerNotification('Simulando a Gastón S. (Estudiante/Cliente).', 'success');
-    }
-  };
-
   // Callback of Client Booking Done
   const handleBookingComplete = (newAppointment: Appointment) => {
     setAppointments(prev => [newAppointment, ...prev]);
@@ -340,19 +298,10 @@ export default function App() {
 
             {/* CLT Real-Time clock representation for Chile alignment */}
             <div className="hidden sm:flex items-center space-x-4">
-              <div className="hidden lg:flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="timezone-badge">
+              <div className="flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="timezone-badge">
                 <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
                 <span className="text-[10px] font-mono tracking-wider text-indigo-700 font-extrabold">HORARIO SANTIAGO:</span>
                 <span className="text-xs font-mono font-black text-slate-900">{cltTime || '12:00:00 CLT'}</span>
-              </div>
-
-              {/* Database Connection Status Badge */}
-              <div className="flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="db-connection-badge">
-                <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-500 ' : 'text-amber-500'}`} />
-                <span className="text-[10px] font-mono tracking-wider text-slate-755 font-extrabold">BASE DE DATOS:</span>
-                <span className={`text-[10px] font-sans font-black px-1.5 py-0.5 rounded ${isSupabaseConfigured ? 'text-emerald-700 bg-emerald-50/80' : 'text-amber-700 bg-amber-50/80'}`}>
-                  {isSupabaseConfigured ? 'Conectado' : 'Local / Demo'}
-                </span>
               </div>
             </div>
 
@@ -594,120 +543,6 @@ export default function App() {
                   </button>
                 </div>
 
-              </div>
-
-              {/* QUICK DEMO ACCESS PANEL FOR PROFESSORS */}
-              <div className="mt-8 space-y-4" id="demo-tester-panel">
-                <div className="text-center">
-                  <p className="text-[10px] font-mono tracking-widest uppercase text-slate-500 font-extrabold">
-                    Panel de Demostración para Evaluación 🎓
-                  </p>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Haz clic en cualquier rol para ingresar al sistema instantáneamente sin registrarte:
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoAccess('andres')}
-                    className="flex flex-col items-center bg-white border border-slate-200/80 hover:border-indigo-500 hover:bg-slate-50/50 p-3 rounded-2xl text-center transition-all cursor-pointer shadow-sm hover:shadow-md group active:scale-95"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors">
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <span className="text-[11px] font-black font-sans text-slate-900 mt-2">DUEÑO / ADMIN</span>
-                    <span className="text-[9px] font-mono text-indigo-700 font-bold block">Andrés</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoAccess('cr7')}
-                    className="flex flex-col items-center bg-white border border-slate-200/80 hover:border-indigo-500 hover:bg-slate-50/50 p-3 rounded-2xl text-center transition-all cursor-pointer shadow-sm hover:shadow-md group active:scale-95"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-violet-50 flex items-center justify-center text-violet-600 group-hover:bg-violet-100 transition-colors">
-                      <Scissors className="w-4 h-4 -rotate-45" />
-                    </div>
-                    <span className="text-[11px] font-black font-sans text-slate-900 mt-2">STAFF BARBERO</span>
-                    <span className="text-[9px] font-mono text-violet-700 font-bold block">Lissy</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoAccess('messi')}
-                    className="flex flex-col items-center bg-white border border-slate-200/80 hover:border-indigo-500 hover:bg-slate-50/50 p-3 rounded-2xl text-center transition-all cursor-pointer shadow-sm hover:shadow-md group active:scale-95"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-pink-600 group-hover:bg-pink-100 transition-colors">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <span className="text-[11px] font-black font-sans text-slate-900 mt-2">STAFF BARBERA</span>
-                    <span className="text-[9px] font-mono text-pink-700 font-bold block">Meylin</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoAccess('client')}
-                    className="flex flex-col items-center bg-white border border-slate-200/80 hover:border-indigo-500 hover:bg-slate-50/50 p-3 rounded-2xl text-center transition-all cursor-pointer shadow-sm hover:shadow-md group active:scale-95"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <span className="text-[11px] font-black font-sans text-slate-900 mt-2">CLIENTE ALUMNO</span>
-                    <span className="text-[9px] font-mono text-emerald-700 font-bold block">Gastón S.</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* DYNAMIC CLOUD SYNC & DATABASE GUIDE CARD */}
-              <div className="mt-8 border-t border-slate-200 pt-6">
-                <div className={`p-5 rounded-3xl ${isSupabaseConfigured ? 'bg-emerald-50/60 border border-emerald-200/80' : 'bg-amber-50/60 border border-amber-200/80'} text-left space-y-3`}>
-                  <div className="flex items-center space-x-2.5">
-                    <Database className={`w-5 h-5 ${isSupabaseConfigured ? 'text-emerald-600' : 'text-amber-600'}`} />
-                    <span className="text-xs font-black tracking-wider uppercase text-slate-900">
-                      Sincronización de Dispositivos (Supabase)
-                    </span>
-                  </div>
-
-                  {isSupabaseConfigured ? (
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-emerald-800">
-                        🟢 ¡Base de datos Relacional Conectada con Éxito!
-                      </p>
-                      <p className="text-[11px] leading-relaxed text-slate-700">
-                        Tu app en Render se encuentra vinculada a tu base de datos de <strong>Supabase (PostgreSQL)</strong>. 
-                        Todos los agendamientos que realices desde tu celular u otros dispositivos se sincronizarán y se guardarán en la nube de forma permanente.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs font-black text-amber-800">
-                        🟡 Modo Demostración Local de Respaldo
-                      </p>
-                      <p className="text-[11px] leading-relaxed text-slate-700">
-                        Actualmente estás operando con persistencia en el navegador web local.
-                      </p>
-                      <div className="bg-white/80 border border-amber-200/60 rounded-xl p-3 space-y-2 mt-2 text-[10.5px] leading-snug text-slate-800">
-                        <p className="font-extrabold text-amber-900">
-                          ¿Cómo conectarla para que se guarde de otros dispositivos?
-                        </p>
-                        <p className="text-slate-650">
-                          Para vincular tu base de datos Supabase en tu despliegue de <strong>Render</strong>, simplemente sigue estos pasos:
-                        </p>
-                        <ul className="list-decimal list-inside space-y-1 text-slate-700 pl-1 font-medium">
-                          <li>Entra a tu panel de control de <strong>Render</strong> de este servicio web.</li>
-                          <li>Ve a la pestaña de <strong>Environment</strong> (Variables de Entorno).</li>
-                          <li>Agrega las siguientes variables:
-                            <div className="bg-slate-100 p-1.5 rounded-lg border border-slate-200/50 my-1 font-mono text-[9px] text-slate-800 leading-none">
-                              <strong>VITE_SUPABASE_URL</strong> = [Tu_URL_de_Supabase]<br />
-                              <strong>VITE_SUPABASE_ANON_KEY</strong> = [Tu_Key_Anon_de_Supabase]
-                            </div>
-                          </li>
-                          <li>Guarda los cambios. Render reiniciará tu app y verás el indicador cambiar a verde 🟢. ¡Los turnos agendados en tu celular aparecerán mágicamente en tu computador al instante!</li>
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             </motion.div>
           ) : (

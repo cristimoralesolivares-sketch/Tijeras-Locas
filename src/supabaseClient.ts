@@ -8,7 +8,7 @@ export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
 
 if (!isSupabaseConfigured) {
   console.warn(
-    'Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are missing. Running in local demo mode.'
+    'Supabase environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) are missing. Running in local offline mode.'
   );
 }
 

@@ -124,7 +124,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
           created_at: new Date().toISOString()
         };
         setRegisteredUsers(prev => [mockNewUser, ...prev]);
-        setStaffActionMsg({ text: `[DEMO] Cuenta para ${newStaffName} creada con éxito.`, type: 'success' });
+        setStaffActionMsg({ text: `Cuenta para ${newStaffName} creada con éxito.`, type: 'success' });
         setNewStaffEmail('');
         setNewStaffPassword('');
         setNewStaffName('');
@@ -217,7 +217,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
         { id: '2', name: 'Lissy', email: 'lissy@tijeraslocas.cl', phone: '+56994151797', role: 'barbero', created_at: new Date().toISOString() },
         { id: '3', name: 'Meylin', email: 'meylin@tijeraslocas.cl', phone: '+56971088802', role: 'barbero', created_at: new Date().toISOString() }
       ]);
-      setStaffActionMsg({ text: 'Staff inicial restaurado en modo demo', type: 'success' });
+      setStaffActionMsg({ text: 'Staff inicial restaurado', type: 'success' });
       setIsSubmittingStaff(false);
       return;
     }
@@ -232,13 +232,6 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
     }
     fetchRegisteredUsers();
     setIsSubmittingStaff(false);
-  };
-
-  // Restores state of the whole booking system (Appointments) to default
-  const handleResetAppointments = () => {
-    if (window.confirm('¿Desea restablecer el estado inicial de las citas de Tijeras Locas para demostración?')) {
-      window.location.reload();
-    }
   };
 
   // Real-time listener for Supabase inserts / updates
