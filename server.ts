@@ -15,8 +15,13 @@ async function startServer() {
     res.json({ status: 'ok', service: 'Tijeras Locas' });
   });
 
-  // Treat as production if NODE_ENV is 'production' OR if running on Render (process.env.RENDER) OR if NODE_ENV is unset (such as production servers)
-  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER || !process.env.NODE_ENV;
+  // Treat as production if explicitly on Render, if NODE_ENV is production, or if running the compiled server.
+  // This allows the Vite dev server with live-rebuild to handle local development beautifully.
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    !!process.env.RENDER ||
+    (typeof __filename !== 'undefined' && __filename.endsWith('server.cjs')) ||
+    (typeof __dirname !== 'undefined' && __dirname.includes('dist'));
 
   if (!isProduction) {
     const vite = await createViteServer({

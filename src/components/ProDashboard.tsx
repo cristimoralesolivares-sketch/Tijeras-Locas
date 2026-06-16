@@ -55,7 +55,11 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
     if (window.confirm('¿Desea restablecer el estado inicial de las citas de Tijeras Locas para demostración?')) {
       // Re-seed original data
       onUpdateAppointments(appointments);
-      localStorage.removeItem('tijeras_locas_appointments');
+      try {
+        localStorage.removeItem('tijeras_locas_appointments');
+      } catch (e) {
+        console.warn('localStorage.removeItem blocked:', e);
+      }
       window.location.reload();
     }
   };

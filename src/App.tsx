@@ -32,10 +32,36 @@ import { Appointment, User as UserType } from './types';
 import { INITIAL_APPOINTMENTS } from './data';
 import { getSupabaseAppointments } from './supabaseHelpers';
 
+// Safe localStorage helpers to prevent SecurityError exceptions in sandboxed iframes/environments
+const safeGetItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn('localStorage.getItem blocked by browser policy:', e);
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('localStorage.setItem blocked by browser policy:', e);
+  }
+};
+
+const safeRemoveItem = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.warn('localStorage.removeItem blocked by browser policy:', e);
+  }
+};
+
 export default function App() {
-  // Shared appointments state backed by localStorage
+  // Shared appointments state backed by localStorage helpers
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = localStorage.getItem('tijeras_locas_appointments');
+    const saved = safeGetItem('tijeras_locas_appointments');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -48,7 +74,7 @@ export default function App() {
 
   // State to handle active logged in user
   const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
-    const saved = localStorage.getItem('tijeras_locas_current_user');
+    const saved = safeGetItem('tijeras_locas_current_user');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -61,7 +87,7 @@ export default function App() {
 
   // Database of users
   const [users, setUsers] = useState<UserType[]>(() => {
-    const saved = localStorage.getItem('tijeras_locas_users_db');
+    const saved = safeGetItem('tijeras_locas_users_db');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -127,7 +153,7 @@ export default function App() {
 
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('tijeras_locas_appointments', JSON.stringify(appointments));
+    safeSetItem('tijeras_locas_appointments', JSON.stringify(appointments));
   }, [appointments]);
 
   // Load initial appointments from Supabase on mount
@@ -150,14 +176,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('tijeras_locas_users_db', JSON.stringify(users));
+    safeSetItem('tijeras_locas_users_db', JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem('tijeras_locas_current_user', JSON.stringify(currentUser));
+      safeSetItem('tijeras_locas_current_user', JSON.stringify(currentUser));
     } else {
-      localStorage.removeItem('tijeras_locas_current_user');
+      safeRemoveItem('tijeras_locas_current_user');
     }
   }, [currentUser]);
 
