@@ -611,57 +611,7 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* QUICK ACCESS PANEL ON LOGIN MODE */}
-                {!isRegisterMode && (
-                  <div className="pt-5 border-t border-slate-100 space-y-3" id="quick-demo-access-helper">
-                    <div className="text-center">
-                      <p className="text-[10px] font-mono tracking-widest uppercase text-slate-500 font-extrabold flex items-center justify-center gap-1">
-                        🔑 Cuentas de Acceso Rápido (Staff)
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        Haz clic para ingresar automáticamente con cuentas predeterminadas:
-                      </p>
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickLogin('andres@tijeraslocas.cl', 'Admin2026')}
-                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
-                        title="Ingresa como Andrés (Dueño / Administrador)"
-                        id="demo-fast-login-andres"
-                      >
-                        <span className="text-[10px] font-black text-slate-900 leading-tight">Andrés</span>
-                        <span className="text-[8px] font-bold text-indigo-700 uppercase tracking-tight mt-0.5">ADMIN</span>
-                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Admin2026</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuickLogin('lissy@tijeraslocas.cl', 'Lissy2026')}
-                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
-                        title="Ingresa como Lissy (Barbera Staff)"
-                        id="demo-fast-login-lissy"
-                      >
-                        <span className="text-[10px] font-black text-slate-900 leading-tight">Lissy</span>
-                        <span className="text-[8px] font-bold text-violet-700 uppercase tracking-tight mt-0.5">BARBERA</span>
-                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Lissy2026</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuickLogin('meylin@tijeraslocas.cl', 'Meylin2026')}
-                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
-                        title="Ingresa como Meylin (Barbera Staff)"
-                        id="demo-fast-login-meylin"
-                      >
-                        <span className="text-[10px] font-black text-slate-900 leading-tight">Meylin</span>
-                        <span className="text-[8px] font-bold text-pink-600 uppercase tracking-tight mt-0.5">BARBERA</span>
-                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Meylin2026</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
 
               </div>
             </motion.div>
