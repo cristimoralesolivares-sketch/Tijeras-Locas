@@ -131,6 +131,31 @@ export default function App() {
 
     setIsLoading(true);
     try {
+      const emailLower = loginEmail.toLowerCase().trim();
+      
+      // Preset accounts direct local access fallback
+      const presets: Record<string, { name: string; role: 'admin' | 'barbero'; pass: string; phone: string }> = {
+        'andres@tijeraslocas.cl': { name: 'Andrés', role: 'admin', pass: 'Admin2026', phone: '+56987654321' },
+        'lissy@tijeraslocas.cl': { name: 'Lissy', role: 'barbero', pass: 'Lissy2026', phone: '+56988887777' },
+        'meylin@tijeraslocas.cl': { name: 'Meylin', role: 'barbero', pass: 'Meylin2026', phone: '+56999996666' }
+      };
+
+      if (presets[emailLower] && loginPassword === presets[emailLower].pass) {
+        const preset = presets[emailLower];
+        const mappedUser: UserType = {
+          id: `preset-${preset.name.toLowerCase()}`,
+          name: preset.name,
+          email: emailLower,
+          phone: preset.phone,
+          role: preset.role,
+        };
+        setCurrentUser(mappedUser);
+        triggerNotification(`¡Bienvenido miembro del staff! Sesión iniciada como ${preset.name}`, 'success');
+        setLoginEmail('');
+        setLoginPassword('');
+        return;
+      }
+
       if (!isSupabaseConfigured) {
         // Safe bypass for sandbox local demo mode with NO hardcoded passwords
         const simulatedName = loginEmail.split('@')[0];
