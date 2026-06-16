@@ -28,14 +28,14 @@ export function mapRowToAppointment(row: any): Appointment {
     // Keep the DB row ID as primary handle, fallback to unique string if not present
     id: row.id !== undefined ? String(row.id) : `db-apt-${Math.random()}`,
     clientName: row.cliente_nombre || 'Cliente Universitario',
-    clientPhone: row.client_phone || '+56 9 1111 2222',
-    clientEmail: row.client_email || 'estudiante@correo.cl',
+    clientPhone: row.client_phone || row.cliente_telefono || '+56 9 1111 2222',
+    clientEmail: row.client_email || row.cliente_email || 'estudiante@correo.cl',
     service: serviceObj,
     date: date,
     time: time,
     professional: row.barbero || 'Andrés',
     status: (row.estado || 'pending') as Appointment['status'],
-    totalPrice: serviceObj?.price || 6500,
+    totalPrice: row.total_price || row.precio || serviceObj?.price || 6500,
   };
 }
 
@@ -83,10 +83,12 @@ export async function insertSupabaseAppointment(
     servicio: apt.service.name,
     fecha_hora: `${apt.date} ${apt.time}`,
     estado: apt.status,
-    // Add columns conditionally in case client has added more
     client_phone: apt.clientPhone,
+    cliente_telefono: apt.clientPhone,
     client_email: apt.clientEmail,
+    cliente_email: apt.clientEmail,
     total_price: apt.totalPrice,
+    precio: apt.totalPrice,
   };
 
   try {
