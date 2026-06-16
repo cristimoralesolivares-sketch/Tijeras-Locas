@@ -516,11 +516,42 @@ export const WORK_HOURS = [
   '19:00'
 ];
 
-export const DAYS_OF_WEEK = [
-  { short: 'Lun', label: 'Lunes', date: '2026-06-08' },
-  { short: 'Mar', label: 'Martes', date: '2026-06-09' },
-  { short: 'Mie', label: 'Miércoles', date: '2026-06-10' },
-  { short: 'Jue', label: 'Jueves', date: '2026-06-11' }, // Today
-  { short: 'Vie', label: 'Viernes', date: '2026-06-12' },
-  { short: 'Sab', label: 'Sábado', date: '2026-06-13' }
-];
+export interface WorkingDay {
+  short: string;
+  label: string;
+  date: string;
+}
+
+export function getTodaySantiago(): string {
+  const options = { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' } as const;
+  const formatter = new Intl.DateTimeFormat('fr-CA', options); // fr-CA outputs YYYY-MM-DD
+  return formatter.format(new Date());
+}
+
+export function getWorkingWeek(): WorkingDay[] {
+  const days: WorkingDay[] = [];
+  const santiagoDateStr = getTodaySantiago();
+  // Set midpoint of today's date in local system to prevent any TZ transition skips
+  let current = new Date(santiagoDateStr + 'T12:00:00');
+  
+  const daysNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const shortNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+  
+  while (days.length < 6) {
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0) { // Skip Sunday
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const dateVal = String(current.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${dateVal}`;
+      
+      days.push({
+        short: shortNames[dayOfWeek],
+        label: daysNames[dayOfWeek],
+        date: dateStr,
+      });
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  return days;
+}

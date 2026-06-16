@@ -32,112 +32,16 @@ import { ClientBooking } from './components/ClientBooking';
 import { Appointment, User as UserType } from './types';
 import { INITIAL_APPOINTMENTS } from './data';
 import { getSupabaseAppointments } from './supabaseHelpers';
-import { isSupabaseConfigured } from './supabaseClient';
+import { isSupabaseConfigured, supabase } from './supabaseClient';
 
-// Safe localStorage helpers to prevent SecurityError exceptions in sandboxed iframes/environments
-const safeGetItem = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (e) {
-    console.warn('localStorage.getItem blocked by browser policy:', e);
-    return null;
-  }
-};
 
-const safeSetItem = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    console.warn('localStorage.setItem blocked by browser policy:', e);
-  }
-};
-
-const safeRemoveItem = (key: string): void => {
-  try {
-    localStorage.removeItem(key);
-  } catch (e) {
-    console.warn('localStorage.removeItem blocked by browser policy:', e);
-  }
-};
 
 export default function App() {
-  // Shared appointments state backed by localStorage helpers
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = safeGetItem('tijeras_locas_appointments');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_APPOINTMENTS;
-      }
-    }
-    return INITIAL_APPOINTMENTS;
-  });
-
-  // State to handle active logged in user
-  const [currentUser, setCurrentUser] = useState<UserType | null>(() => {
-    const saved = safeGetItem('tijeras_locas_current_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
-
-  // Database of users
-  const [users, setUsers] = useState<UserType[]>(() => {
-    const saved = safeGetItem('tijeras_locas_users_db');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) return parsed;
-      } catch (e) {
-        // Fallback to defaults
-      }
-    }
-
-    // Default seeded staff and andrés
-    const defaults: UserType[] = [
-      {
-        id: 'user-andres',
-        name: 'Andrés (Dueño)',
-        email: 'andres@tijeraslocas.cl',
-        phone: '+56911112222',
-        role: 'admin',
-        password: 'andres123'
-      },
-      {
-        id: 'user-cr7',
-        name: 'Lissy',
-        email: 'lissy@tijeraslocas.cl',
-        phone: '+56994151797',
-        role: 'barbero',
-        password: 'lissy123'
-      },
-      {
-        id: 'user-messi',
-        name: 'Meylin',
-        email: 'meylin@tijeraslocas.cl',
-        phone: '+56971088802',
-        role: 'barbero',
-        password: 'meylin123'
-      },
-      {
-        id: 'user-pepe',
-        name: 'Gaston Soublette',
-        email: 'gaston@correo.cl',
-        phone: '+56988882222',
-        role: 'cliente',
-        password: '123'
-      }
-    ];
-    return defaults;
-  });
+  const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
 
   // Forms states
+  const [isLoading, setIsLoading] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -153,10 +57,29 @@ export default function App() {
   const [cltTime, setCltTime] = useState('');
   const [notification, setNotification] = useState<{message: string; type: 'success' | 'info' | 'error'} | null>(null);
 
-  // Sync to localStorage
+  // Restore session from Supabase on mount
   useEffect(() => {
-    safeSetItem('tijeras_locas_appointments', JSON.stringify(appointments));
-  }, [appointments]);
+    const restoreSession = async () => {
+      if (!isSupabaseConfigured) return;
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (user && !error) {
+          const meta = user.user_metadata || {};
+          const mappedUser: UserType = {
+            id: user.id,
+            name: meta.name || user.email?.split('@')[0] || 'Usuario',
+            email: user.email || '',
+            phone: meta.phone || '',
+            role: meta.role || 'cliente',
+          };
+          setCurrentUser(mappedUser);
+        }
+      } catch (e) {
+        console.error('Error recovering session on mount:', e);
+      }
+    };
+    restoreSession();
+  }, []);
 
   // Load initial appointments from Supabase on mount
   useEffect(() => {
@@ -164,11 +87,7 @@ export default function App() {
       try {
         const fresh = await getSupabaseAppointments();
         if (fresh && fresh.length > 0) {
-          setAppointments(prev => {
-            const dbIds = new Set(fresh.map((f) => String(f.id)));
-            const legacy = prev.filter((a) => a.id.startsWith('apt-') && !dbIds.has(a.id));
-            return [...fresh, ...legacy];
-          });
+          setAppointments(fresh);
         }
       } catch (err) {
         console.error('Error fetching Supabase data on mount:', err);
@@ -176,18 +95,6 @@ export default function App() {
     };
     fetchRealDbAppointments();
   }, []);
-
-  useEffect(() => {
-    safeSetItem('tijeras_locas_users_db', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    if (currentUser) {
-      safeSetItem('tijeras_locas_current_user', JSON.stringify(currentUser));
-    } else {
-      safeRemoveItem('tijeras_locas_current_user');
-    }
-  }, [currentUser]);
 
   // Real-time Santiago CLT Clock Alignment
   useEffect(() => {
@@ -215,86 +122,178 @@ export default function App() {
     }, 4500);
   };
 
-  // Auth execution
-  const handleLogin = (e?: React.FormEvent) => {
+  // Auth execution using actual Supabase Auth
+  const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!loginEmail || !loginPassword) {
       triggerNotification('Por favor ingrese email y contraseña.', 'error');
       return;
     }
 
-    const matchedUser = users.find(
-      u => u.email.toLowerCase() === loginEmail.toLowerCase().trim() && u.password === loginPassword
-    );
+    setIsLoading(true);
+    try {
+      if (!isSupabaseConfigured) {
+        // Safe bypass for sandbox local demo mode with NO hardcoded passwords
+        const simulatedName = loginEmail.split('@')[0];
+        const role = loginEmail.includes('andres') ? 'admin' : (loginEmail.includes('lissy') || loginEmail.includes('meylin') ? 'barbero' : 'cliente');
+        const mappedUser: UserType = {
+          id: `demo-${Date.now()}`,
+          name: simulatedName.charAt(0).toUpperCase() + simulatedName.slice(1),
+          email: loginEmail.toLowerCase().trim(),
+          phone: '+56900000000',
+          role: role as any,
+        };
+        setCurrentUser(mappedUser);
+        triggerNotification(`[DEMO] Sesión iniciada como ${simulatedName}`, 'success');
+        setLoginEmail('');
+        setLoginPassword('');
+        return;
+      }
 
-    if (matchedUser) {
-      setCurrentUser(matchedUser);
-      triggerNotification(`¡Bienvenido de vuelta, ${matchedUser.name}! Sesión iniciada.`, 'success');
-      // Clear forms
-      setLoginEmail('');
-      setLoginPassword('');
-    } else {
-      triggerNotification('Credenciales incorretas. Intente con el demo o verifique datos.', 'error');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.toLowerCase().trim(),
+        password: loginPassword,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const meta = data.user.user_metadata || {};
+        const mappedUser: UserType = {
+          id: data.user.id,
+          name: meta.name || data.user.email?.split('@')[0] || 'Usuario',
+          email: data.user.email || '',
+          phone: meta.phone || '',
+          role: meta.role || 'cliente',
+        };
+        setCurrentUser(mappedUser);
+        triggerNotification(`¡Bienvenido de vuelta, ${mappedUser.name}!`, 'success');
+        setLoginEmail('');
+        setLoginPassword('');
+      }
+    } catch (err: any) {
+      triggerNotification(`Error de autenticación: ${err.message || err}`, 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName || !regPhone || !regEmail || !regPassword) {
       triggerNotification('Por favor, completa todos los campos del registro.', 'error');
       return;
     }
 
-    const emailExists = users.some(u => u.email.toLowerCase() === regEmail.toLowerCase().trim());
-    if (emailExists) {
-      triggerNotification('Este correo ya está registrado.', 'error');
-      return;
+    setIsLoading(true);
+    try {
+      if (!isSupabaseConfigured) {
+        // Safe signup simulation for local testing
+        const newUser: UserType = {
+          id: `demo-${Date.now()}`,
+          name: regName,
+          phone: regPhone,
+          email: regEmail.toLowerCase().trim(),
+          role: 'cliente',
+        };
+        setCurrentUser(newUser);
+        triggerNotification(`[DEMO] Cuenta simulada creada con éxito!`, 'success');
+        setRegName('');
+        setRegPhone('');
+        setRegEmail('');
+        setRegPassword('');
+        setIsRegisterMode(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: regEmail.toLowerCase().trim(),
+        password: regPassword,
+        options: {
+          data: {
+            name: regName,
+            phone: regPhone,
+            role: 'cliente'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const meta = data.user.user_metadata || {};
+        const mappedUser: UserType = {
+          id: data.user.id,
+          name: meta.name || regName,
+          email: data.user.email || regEmail,
+          phone: meta.phone || regPhone,
+          role: 'cliente',
+        };
+        setCurrentUser(mappedUser);
+        triggerNotification(`Cuenta creada con éxito. ¡Sesión iniciada!`, 'success');
+        setRegName('');
+        setRegPhone('');
+        setRegEmail('');
+        setRegPassword('');
+        setIsRegisterMode(false);
+      }
+    } catch (err: any) {
+      triggerNotification(`Error de registro: ${err.message || err}`, 'error');
+    } finally {
+      setIsLoading(false);
     }
-
-    const newUser: UserType = {
-      id: `user-${Date.now()}`,
-      name: regName,
-      phone: regPhone,
-      email: regEmail.toLowerCase().trim(),
-      role: 'cliente',
-      password: regPassword
-    };
-
-    setUsers(prev => [...prev, newUser]);
-    setCurrentUser(newUser);
-    triggerNotification(`¡Cuenta de Cliente creada con éxito! Sigue al flujo de reservas.`, 'success');
-    
-    // Clear registration fields
-    setRegName('');
-    setRegPhone('');
-    setRegEmail('');
-    setRegPassword('');
-    setIsRegisterMode(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+      }
+    } catch (err) {
+      console.warn('Supabase signout failed, clearing local state only:', err);
+    }
     setCurrentUser(null);
     triggerNotification('Sesión finalizada correctamente.', 'info');
   };
 
-  // Quick Demo Access Selector
+  // Quick Demo Access Selector with ZERO plain text passwords
   const handleQuickDemoAccess = (role: 'client' | 'cr7' | 'messi' | 'andres') => {
     if (role === 'andres') {
-      const match = users.find(u => u.email === 'andres@tijeraslocas.cl');
-      if (match) setCurrentUser(match);
+      setCurrentUser({
+        id: 'demo-andres',
+        name: 'Andrés (Admin)',
+        email: 'andres@tijeraslocas.cl',
+        phone: '+56911112222',
+        role: 'admin',
+      });
       triggerNotification('Simulando a Andrés (Dueño/Administrador) con acceso total.', 'success');
     } else if (role === 'cr7') {
-      const match = users.find(u => u.email === 'lissy@tijeraslocas.cl');
-      if (match) setCurrentUser(match);
+      setCurrentUser({
+        id: 'demo-lissy',
+        name: 'Lissy',
+        email: 'lissy@tijeraslocas.cl',
+        phone: '+56994151797',
+        role: 'barbero',
+      });
       triggerNotification('Simulando a Lissy (Staff Barbera).', 'success');
     } else if (role === 'messi') {
-      const match = users.find(u => u.email === 'meylin@tijeraslocas.cl');
-      if (match) setCurrentUser(match);
+      setCurrentUser({
+        id: 'demo-meylin',
+        name: 'Meylin',
+        email: 'meylin@tijeraslocas.cl',
+        phone: '+56971088802',
+        role: 'barbero',
+      });
       triggerNotification('Simulando a Meylin (Staff Barbera).', 'success');
     } else {
-      const match = users.find(u => u.email === 'gaston@correo.cl');
-      if (match) setCurrentUser(match);
-      triggerNotification('Simulando a Gastón Soublette (Estudiante/Cliente).', 'success');
+      setCurrentUser({
+        id: 'demo-gaston',
+        name: 'Gastón S.',
+        email: 'gaston@correo.cl',
+        phone: '+56988882222',
+        role: 'cliente',
+      });
+      triggerNotification('Simulando a Gastón S. (Estudiante/Cliente).', 'success');
     }
   };
 

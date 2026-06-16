@@ -24,7 +24,7 @@ import {
   BarChart3,
   ListOrdered
 } from 'lucide-react';
-import { SERVICES, BARBERS, WORK_HOURS, DAYS_OF_WEEK } from '../data';
+import { SERVICES, BARBERS, WORK_HOURS, getTodaySantiago, getWorkingWeek } from '../data';
 import { Appointment, User as UserType, Service } from '../types';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { getSupabaseAppointments, updateSupabaseAppointmentStatus } from '../supabaseHelpers';
@@ -45,7 +45,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
   const isAdmin = currentUser.role === 'admin';
 
   // State to filter Master Agenda by Day in the Dashboard
-  const [selectedAgendaDay, setSelectedAgendaDay] = useState<string>('2026-06-11'); // Initial Thursday June 11, 2026
+  const [selectedAgendaDay, setSelectedAgendaDay] = useState<string>(() => getTodaySantiago());
 
   // State to track simulated promotions spawned for low-demand hour gaps
   const [activePromotions, setActivePromotions] = useState<Array<{hour: string; discount: number; code: string}>>([]);
@@ -53,13 +53,6 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
   // Restores state of the whole booking system (Appointments) to default
   const handleResetAppointments = () => {
     if (window.confirm('¿Desea restablecer el estado inicial de las citas de Tijeras Locas para demostración?')) {
-      // Re-seed original data
-      onUpdateAppointments(appointments);
-      try {
-        localStorage.removeItem('tijeras_locas_appointments');
-      } catch (e) {
-        console.warn('localStorage.removeItem blocked:', e);
-      }
       window.location.reload();
     }
   };
@@ -449,7 +442,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
 
           {/* Quick agenda day switcher */}
           <div className="flex bg-slate-100 p-1 border border-slate-200 rounded-xl" id="agenda-day-switcher">
-            {DAYS_OF_WEEK.map((day) => {
+            {getWorkingWeek().map((day) => {
               const isSelected = selectedAgendaDay === day.date;
               return (
                 <button

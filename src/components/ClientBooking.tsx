@@ -20,7 +20,7 @@ import {
   CalendarDays,
   ShieldAlert
 } from 'lucide-react';
-import { SERVICES, BARBERS, WORK_HOURS, DAYS_OF_WEEK } from '../data';
+import { SERVICES, BARBERS, WORK_HOURS, getTodaySantiago, getWorkingWeek } from '../data';
 import { Service, ServiceCategory, Appointment, User as UserType } from '../types';
 import { BarberMap } from './BarberMap';
 import { supabase } from '../supabaseClient';
@@ -46,7 +46,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string>('Andrés');
-  const [selectedDay, setSelectedDay] = useState<string>('2026-06-11'); // Initial to Thursday June 11, 2026
+  const [selectedDay, setSelectedDay] = useState<string>(() => getTodaySantiago());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('TODOS');
 
@@ -593,9 +593,9 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
 
                   {/* Selector rápido de fecha */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-mono text-slate-705 block font-black">Días de esta semana (Junio 2026):</span>
+                    <span className="text-[10px] font-mono text-slate-705 block font-black">Días disponibles para agendar:</span>
                     <div className="grid grid-cols-3 gap-2">
-                      {DAYS_OF_WEEK.map((day) => {
+                      {getWorkingWeek().map((day) => {
                         const isDaySelected = selectedDay === day.date;
                         return (
                           <button
