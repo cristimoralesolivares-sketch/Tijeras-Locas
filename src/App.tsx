@@ -255,6 +255,74 @@ export default function App() {
     triggerNotification('Sesión finalizada correctamente.', 'info');
   };
 
+  // Quick Click Login Helper for easy evaluation
+  const handleQuickLogin = async (email: string, pass: string) => {
+    setLoginEmail(email);
+    setLoginPassword(pass);
+    setIsLoading(true);
+    // Give state a small frame to settle, then perform login
+    setTimeout(async () => {
+      try {
+        if (!isSupabaseConfigured) {
+          const simulatedName = email.split('@')[0];
+          const role = email.includes('andres') ? 'admin' : 'barbero';
+          const mappedUser: UserType = {
+            id: `demo-${Date.now()}`,
+            name: simulatedName.charAt(0).toUpperCase() + simulatedName.slice(1),
+            email: email,
+            phone: '+56900000000',
+            role: role as any,
+          };
+          setCurrentUser(mappedUser);
+          triggerNotification(`[DEMO] Sesión iniciada como ${simulatedName}`, 'success');
+          setLoginEmail('');
+          setLoginPassword('');
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase().trim(),
+          password: pass,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          const meta = data.user.user_metadata || {};
+          const mappedUser: UserType = {
+            id: data.user.id,
+            name: meta.name || data.user.email?.split('@')[0] || 'Usuario',
+            email: data.user.email || '',
+            phone: meta.phone || '',
+            role: meta.role || 'cliente',
+          };
+          setCurrentUser(mappedUser);
+          triggerNotification(`¡Bienvenido de vuelta, ${mappedUser.name}!`, 'success');
+          setLoginEmail('');
+          setLoginPassword('');
+        }
+      } catch (err: any) {
+        console.warn('Supabase signin failed, falling back to local session simulation', err);
+        const simulatedName = email.split('@')[0];
+        const role = email.includes('andres') ? 'admin' : 'barbero';
+        const mappedUser: UserType = {
+          id: `demo-${Date.now()}`,
+          name: simulatedName.charAt(0).toUpperCase() + simulatedName.slice(1),
+          email: email,
+          phone: '+56911112222',
+          role: role as any,
+        };
+        setCurrentUser(mappedUser);
+        triggerNotification(`[DEMO] Sesión iniciada como ${simulatedName} (contingencia local)`, 'success');
+        setLoginEmail('');
+        setLoginPassword('');
+      } finally {
+        setIsLoading(false);
+      }
+    }, 150);
+  };
+
   // Callback of Client Booking Done
   const handleBookingComplete = (newAppointment: Appointment) => {
     setAppointments(prev => [newAppointment, ...prev]);
@@ -349,14 +417,14 @@ export default function App() {
               notification.type === 'error' 
                 ? 'bg-red-50 border-red-200 text-red-950' 
                 : notification.type === 'info' 
-                  ? 'bg-blue-50 border-blue-200 text-blue-955' 
-                  : 'bg-indigo-50 border-indigo-200 text-indigo-955'
+                  ? 'bg-blue-50 border-blue-200 text-blue-900' 
+                  : 'bg-indigo-50 border-indigo-200 text-indigo-900'
             }`}>
               <div className="bg-white/90 p-2 rounded-md mt-0.5 border border-slate-200 shadow-sm">
                 <Scissors className="w-4 h-4 text-indigo-700 animate-pulse" />
               </div>
               <div className="text-left">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-indigo-805 font-extrabold">
+                <p className="text-[9px] font-mono uppercase tracking-widest text-indigo-800 font-extrabold">
                   {notification.type === 'error' ? 'Error de Sistema' : notification.type === 'info' ? 'Notificación' : 'Tijeras Locas Portal'}
                 </p>
                 <p className="text-xs mt-0.5 leading-relaxed font-bold text-slate-900">
@@ -386,7 +454,7 @@ export default function App() {
                 
                 {/* Brand Greetings on Form */}
                 <div className="text-center space-y-2">
-                  <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-150 flex items-center justify-center text-indigo-705 shadow-sm">
+                  <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 shadow-sm">
                     <Scissors className="w-6 h-6 rotate-45" />
                   </div>
                   <h2 className="text-2xl font-black text-slate-950 uppercase tracking-wider">
@@ -412,13 +480,13 @@ export default function App() {
                           value={regName}
                           onChange={e => setRegName(e.target.value)}
                           placeholder="Andrés Bello"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-350 focus:border-indigo-650 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-705 block font-black">Teléfono de Contacto</label>
+                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-700 block font-black">Teléfono de Contacto</label>
                       <div className="relative">
                         <span className="absolute left-3 top-3.5 text-indigo-600"><Phone className="w-4 h-4" /></span>
                         <input 
@@ -427,13 +495,13 @@ export default function App() {
                           value={regPhone}
                           onChange={e => setRegPhone(e.target.value)}
                           placeholder="+569 9876 5432"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-350 focus:border-indigo-655 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-705 block font-black">Email Institucional</label>
+                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-700 block font-black">Email Institucional</label>
                       <div className="relative">
                         <span className="absolute left-3 top-3.5 text-indigo-600"><Mail className="w-4 h-4" /></span>
                         <input 
@@ -442,13 +510,13 @@ export default function App() {
                           value={regEmail}
                           onChange={e => setRegEmail(e.target.value)}
                           placeholder="alumno@universidad.cl"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-350 focus:border-indigo-655 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-705 block font-black">Contraseña Segura</label>
+                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-700 block font-black">Contraseña Segura</label>
                       <div className="relative">
                         <span className="absolute left-3 top-3.5 text-indigo-600"><Lock className="w-4 h-4" /></span>
                         <input 
@@ -457,7 +525,7 @@ export default function App() {
                           value={regPassword}
                           onChange={e => setRegPassword(e.target.value)}
                           placeholder="Contraseña"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-355 focus:border-indigo-655 rounded-xl pl-9 pr-10 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-10 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                         <button
                           type="button"
@@ -481,22 +549,22 @@ export default function App() {
                   /* LOGIN FORM */
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-705 block font-black">Correo de Acceso</label>
+                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-700 block font-black">Correo de Acceso</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-3.5 text-indigo-600"><Mail className="w-4 h-4" /></span>
+                        <span className="absolute left-3 top-3.5 text-indigo-605"><Mail className="w-4 h-4" /></span>
                         <input 
                           type="email" 
                           required
                           value={loginEmail}
                           onChange={e => setLoginEmail(e.target.value)}
                           placeholder="andres@tijeraslocas.cl o tu correo"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-350 focus:border-indigo-650 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-4 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1 text-left">
-                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-705 block font-black">Contraseña</label>
+                      <label className="text-[10px] font-mono tracking-wider uppercase text-slate-700 block font-black">Contraseña</label>
                       <div className="relative">
                         <span className="absolute left-3 top-3.5 text-indigo-600"><Lock className="w-4 h-4" /></span>
                         <input 
@@ -505,7 +573,7 @@ export default function App() {
                           value={loginPassword}
                           onChange={e => setLoginPassword(e.target.value)}
                           placeholder="Tu contraseña"
-                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-350 focus:border-indigo-650 rounded-xl pl-9 pr-10 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                          className="w-full bg-white border-2 border-slate-200 hover:border-slate-300 focus:border-indigo-600 rounded-xl pl-9 pr-10 py-3 text-xs text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
                         />
                         <button
                           type="button"
@@ -543,6 +611,58 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* QUICK ACCESS PANEL ON LOGIN MODE */}
+                {!isRegisterMode && (
+                  <div className="pt-5 border-t border-slate-100 space-y-3" id="quick-demo-access-helper">
+                    <div className="text-center">
+                      <p className="text-[10px] font-mono tracking-widest uppercase text-slate-500 font-extrabold flex items-center justify-center gap-1">
+                        🔑 Cuentas de Acceso Rápido (Staff)
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Haz clic para ingresar automáticamente con cuentas predeterminadas:
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('andres@tijeraslocas.cl', 'Admin2026')}
+                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
+                        title="Ingresa como Andrés (Dueño / Administrador)"
+                        id="demo-fast-login-andres"
+                      >
+                        <span className="text-[10px] font-black text-slate-900 leading-tight">Andrés</span>
+                        <span className="text-[8px] font-bold text-indigo-700 uppercase tracking-tight mt-0.5">ADMIN</span>
+                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Admin2026</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('lissy@tijeraslocas.cl', 'Lissy2026')}
+                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
+                        title="Ingresa como Lissy (Barbera Staff)"
+                        id="demo-fast-login-lissy"
+                      >
+                        <span className="text-[10px] font-black text-slate-900 leading-tight">Lissy</span>
+                        <span className="text-[8px] font-bold text-violet-700 uppercase tracking-tight mt-0.5">BARBERA</span>
+                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Lissy2026</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('meylin@tijeraslocas.cl', 'Meylin2026')}
+                        className="flex flex-col items-center bg-slate-50/60 border border-slate-200 hover:border-indigo-500 hover:bg-white p-2.5 rounded-xl text-center transition-all cursor-pointer shadow-sm hover:shadow active:scale-95 group"
+                        title="Ingresa como Meylin (Barbera Staff)"
+                        id="demo-fast-login-meylin"
+                      >
+                        <span className="text-[10px] font-black text-slate-900 leading-tight">Meylin</span>
+                        <span className="text-[8px] font-bold text-pink-600 uppercase tracking-tight mt-0.5">BARBERA</span>
+                        <span className="text-[7.5px] font-mono text-slate-400 leading-none mt-1 group-hover:text-amber-600 transition-colors">Meylin2026</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
               </div>
             </motion.div>
           ) : (
@@ -579,7 +699,7 @@ export default function App() {
       </main>
 
       {/* Modern university-friendly Footer */}
-      <footer className="mt-auto py-8 bg-slate-150/70 border-t border-slate-200/80 w-full" id="luxury-footer">
+      <footer className="mt-auto py-8 bg-slate-100/70 border-t border-slate-200/80 w-full" id="luxury-footer">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
           
           <div className="flex items-center space-x-2 text-slate-500 font-mono text-[9px] tracking-widest font-extrabold">

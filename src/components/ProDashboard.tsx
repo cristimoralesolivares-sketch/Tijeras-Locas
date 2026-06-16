@@ -419,7 +419,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
       >
         <div className="space-y-1.5 text-left z-10">
           <div className="flex items-center space-x-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-indigo-650 animate-pulse" />
+            <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
             <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-indigo-700 font-black">
               {isAdmin ? 'MÓDULO DE ADMINISTRACIÓN GENERAL' : `MÓDULO DE AGENDA CENTRALIZADA • STAFF`}
             </span>
@@ -470,7 +470,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
           {activeAdminTab === 'analytics' ? (
             <>
               <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
-                <BarChart3 className="w-5 h-5 text-indigo-705" />
+                <BarChart3 className="w-5 h-5 text-indigo-700" />
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
                   Inteligencia de Negocios en Tiempo Real (Santiago)
                 </h3>
@@ -675,7 +675,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
               
               {/* Left Column: Form to create a staff member */}
               <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center space-x-2 border-b border-slate-150 pb-2">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
                   <UserPlus className="w-4 h-4 text-indigo-600" />
                   <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider font-sans">
                     Registrar Miembro del Staff
@@ -772,7 +772,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
                       type="button"
                       onClick={handleAutoSeedStaff}
                       disabled={isSubmittingStaff}
-                      className="w-full py-2 bg-slate-50 border border-slate-200 text-slate-705 hover:bg-slate-100 hover:text-slate-900 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider transition-all cursor-pointer"
+                      className="w-full py-2 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider transition-all cursor-pointer"
                       title="Registra inmediatamente Andrés, Lissy y Meylin con sus contraseñas por defecto"
                     >
                       ⚡ Crear Andrés, Lissy y Meylin (1-Clic)
@@ -783,7 +783,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
 
               {/* Right Column: List of all users registered */}
               <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-150 pb-2">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4 text-indigo-600" />
                     <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider font-sans">
@@ -827,7 +827,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
                               <span className="text-[10px] font-mono text-slate-500 block truncate">
                                 📩 {u.email}
                               </span>
-                              <span className="text-[9.5px] font-mono text-indigo-650 block">
+                              <span className="text-[9.5px] font-mono text-indigo-600 block">
                                 📞 {u.phone}
                               </span>
                             </div>
@@ -905,7 +905,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
 
               return (
                 <div key={barberName} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-4 text-left">
-                  <div className="border-b border-slate-150 pb-2 flex justify-between items-center">
+                  <div className="border-b border-slate-100 pb-2 flex justify-between items-center">
                     <span className="text-xs font-black text-slate-900 uppercase tracking-wider block">
                       💈 {barberName}
                     </span>
@@ -1008,7 +1008,7 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
                 <p className="text-[10px] text-slate-500">¡Aprovecha y toma un descanso o ayuda en el local!</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-150 space-y-2">
+              <div className="divide-y divide-slate-100 space-y-2">
                 {visibleAppointments.map(apt => {
                   const statusColors = {
                     pending: 'bg-amber-50 text-amber-805 border-amber-250',

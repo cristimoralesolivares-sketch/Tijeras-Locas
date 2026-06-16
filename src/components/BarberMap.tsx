@@ -111,7 +111,7 @@ export function BarberMap({ compact = false }: BarberMapProps) {
               <li className="flex items-start gap-1.5">
                 <span className="text-indigo-800 font-black">📍</span>
                 <span className="text-slate-900 font-bold">Puedes ver coordenadas GPS exactas para tu navegador del auto: 
-                  <a href={coordinatesUrl} target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-705 font-black hover:underline inline-flex items-center gap-0.5">
+                  <a href={coordinatesUrl} target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-700 font-black hover:underline inline-flex items-center gap-0.5">
                     ({BARBER_LATITUDE}, {BARBER_LONGITUDE})
                   </a>
                 </span>
@@ -121,7 +121,7 @@ export function BarberMap({ compact = false }: BarberMapProps) {
         </div>
 
         {/* Footnote advice for users */}
-        <p className="text-[10px] text-slate-500 font-mono text-center pt-2 border-t border-slate-150">
+        <p className="text-[10px] text-slate-500 font-mono text-center pt-2 border-t border-slate-100">
           Ubicación de alta precisión real de La Serena. Sin cargos extra de navegación o uso de datos de satélite simulados.
         </p>
       </div>

@@ -307,7 +307,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
           </div>
 
           {/* Navigation Integration Guidance on successful booking */}
-          <div className="text-left max-w-md mx-auto border-t border-slate-150 pt-5 space-y-4">
+          <div className="text-left max-w-md mx-auto border-t border-slate-100 pt-5 space-y-4">
             <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start space-x-3 shadow-inner">
               <span className="text-xl">🗺️</span>
               <div className="space-y-1">
@@ -464,7 +464,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
                           className={`p-4 rounded-xl border-2 cursor-pointer text-left transition-all shadow-sm ${
                             isSelected
                               ? 'bg-indigo-50/40 border-indigo-600 ring-4 ring-indigo-100'
-                              : 'bg-white border-slate-205 hover:bg-slate-50 hover:border-slate-350'
+                              : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
@@ -536,7 +536,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
                           className={`p-4 rounded-xl border-2 text-left cursor-pointer transition-all flex flex-col justify-between shadow-sm hover:scale-[1.01] ${
                             isSelected
                               ? 'bg-indigo-50/40 border-indigo-600 ring-2 ring-indigo-50'
-                              : 'bg-white border-slate-200 hover:border-slate-350 hover:bg-slate-50'
+                              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                           }`}
                         >
                           <div className="space-y-1.5">
@@ -593,7 +593,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
 
                   {/* Selector rápido de fecha */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-mono text-slate-705 block font-black">Días disponibles para agendar:</span>
+                    <span className="text-[10px] font-mono text-slate-700 block font-black">Días disponibles para agendar:</span>
                     <div className="grid grid-cols-3 gap-2">
                       {getWorkingWeek().map((day) => {
                         const isDaySelected = selectedDay === day.date;
@@ -621,7 +621,7 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
 
                   {/* Horas disponibles dynamically locked out */}
                   <div className="space-y-2.5 pt-3 border-t border-slate-200">
-                    <span className="text-[10px] font-mono text-slate-750 font-black block">
+                    <span className="text-[10px] font-mono text-slate-755 font-black block">
                       Selecciona una hora para {selectedBarber}:
                     </span>
 
@@ -638,10 +638,10 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
                             onClick={() => setSelectedTime(hr)}
                             className={`py-2.5 px-2 text-xs font-mono rounded-lg font-bold border transition-all cursor-pointer shadow-sm ${
                               isBooked
-                                ? 'bg-slate-100 border-slate-205 text-slate-400 opacity-40 cursor-not-allowed line-through font-normal'
+                                ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed line-through font-normal'
                                 : isTimeSelected
-                                  ? 'bg-indigo-650 border-indigo-700 text-white shadow-md font-black animate-scale'
-                                  : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50 hover:border-slate-355'
+                                  ? 'bg-indigo-600 border-indigo-700 text-white shadow-md font-black animate-scale'
+                                  : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50 hover:border-slate-300'
                             }`}
                           >
                             <span>{hr}</span>
@@ -654,13 +654,13 @@ export const ClientBooking: React.FC<ClientBookingProps> = ({
 
                   {/* Summary of Chosen values prior to submit */}
                   {selectedService && selectedDay && selectedTime ? (
-                    <div className="bg-indigo-50 border-2 border-indigo-150 rounded-xl p-4 space-y-2 text-left">
-                      <span className="text-[8px] font-mono uppercase font-black text-indigo-805 tracking-wider block">PRE-AGENDA LISTA</span>
+                    <div className="bg-indigo-50 border-2 border-indigo-100 rounded-xl p-4 space-y-2 text-left">
+                      <span className="text-[8px] font-mono uppercase font-black text-indigo-800 tracking-wider block">PRE-AGENDA LISTA</span>
                       <p className="text-xs font-black text-slate-900 capitalize leading-snug">{selectedService.name}</p>
                       <p className="text-[11px] font-sans text-slate-700">
                         • Barbero: <strong className="text-slate-900 font-black">{selectedBarber}</strong>
                       </p>
-                      <p className="text-[11px] font-sans text-slate-705">
+                      <p className="text-[11px] font-sans text-slate-700">
                         • Turno: <strong className="text-slate-900 font-black">{selectedDay} @ {selectedTime} hrs</strong>
                       </p>
                       <p className="text-xs font-black text-emerald-705 font-sans pt-1">
