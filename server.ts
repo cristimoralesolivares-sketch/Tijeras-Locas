@@ -24,7 +24,18 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    // Determine the absolute path to the 'dist' directory.
+    // On production (Render), this server runs as a compiled CJS file (`dist/server.cjs`) inside the `dist` folder itself.
+    // In local dev, it runs from the root folder.
+    let distPath = path.join(process.cwd(), 'dist');
+    try {
+      if (typeof __dirname !== 'undefined') {
+        distPath = __dirname.endsWith('dist') ? __dirname : path.join(__dirname, 'dist');
+      }
+    } catch {
+      // Fallback to process.cwd() if __dirname is not defined
+    }
+
     app.use(express.static(distPath));
     // Serve index.html for all other routes to keep React Router / SPA behaviors intact
     app.get('*', (req, res) => {
