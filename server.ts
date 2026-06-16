@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 
 async function startServer() {
@@ -24,21 +25,55 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Determine the absolute path to the 'dist' directory.
-    // On production (Render), this server runs as a compiled CJS file (`dist/server.cjs`) inside the `dist` folder itself.
-    // In local dev, it runs from the root folder.
-    let distPath = path.join(process.cwd(), 'dist');
-    try {
-      if (typeof __dirname !== 'undefined') {
-        distPath = __dirname.endsWith('dist') ? __dirname : path.join(__dirname, 'dist');
+    // Find the 'dist' directory by checking multiple robust paths.
+    // In production (Render), this server runs from a compiled CJS file (`dist/server.cjs`) inside the `dist` folder itself.
+    // In local dev, it could run from the root folder.
+    const possiblePaths = [
+      path.join(process.cwd(), 'dist'),
+      path.join(__dirname),
+      path.join(__dirname, '..'),
+      path.join(__dirname, '../dist'),
+      path.join(__dirname, 'dist'),
+      process.cwd()
+    ];
+    
+    let distPath = '';
+    for (const p of possiblePaths) {
+      if (fs.existsSync(path.join(p, 'index.html')) && fs.existsSync(path.join(p, 'assets'))) {
+        distPath = p;
+        break;
       }
-    } catch {
-      // Fallback to process.cwd() if __dirname is not defined
+    }
+    
+    if (!distPath) {
+      // Fallback if index.html can't be found
+      distPath = path.join(process.cwd(), 'dist');
     }
 
+    console.log('--- Production Server Environment Diagnostics ---');
+    console.log(`process.cwd(): ${process.cwd()}`);
+    console.log(`__dirname: ${typeof __dirname !== 'undefined' ? __dirname : 'undefined'}`);
+    console.log(`Resolved distPath: ${distPath}`);
+    console.log(`dist/index.html exists: ${fs.existsSync(path.join(distPath, 'index.html'))}`);
+    try {
+      if (fs.existsSync(distPath)) {
+        console.log(`Contents of distPath:`, fs.readdirSync(distPath));
+      }
+    } catch (e) {
+      console.error('Error reading distPath contents:', e);
+    }
+    console.log('-------------------------------------------------');
+
     app.use(express.static(distPath));
+    
     // Serve index.html for all other routes to keep React Router / SPA behaviors intact
     app.get('*', (req, res) => {
+      // Avoid sending index.html for missing assets/files with extensions
+      // to prevent "Unexpected token '<'" crash on client. Instead, send a proper 404.
+      if (req.path.includes('.') || req.path.startsWith('/api/')) {
+        res.status(404).send('Not Found');
+        return;
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
