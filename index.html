@@ -3,9 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tijeras Locas — Barbería Universitaria</title>
+    
+    <!-- SEO Meta Tags -->
+    <title>Tijeras Locas — Barbería Universitaria 💈✂️</title>
+    <meta name="description" content="Agenda tu hora en Tijeras Locas, la barbería oficial del Barrio Universitario en Santiago. Precios amigables para estudiantes, cortes clásicos, degradados (fades) y perfilado de barba." />
+    
+    <!-- Open Graph (Facebook / LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Tijeras Locas — Barbería Universitaria" />
+    <meta property="og:description" content="Agenda tu hora online. Cortes clásicos, degradados y barba en Barrio Universitario de Santiago al mejor precio escolar." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=1200&auto=format&fit=crop" />
+    
+    <!-- PWA & Mobile Web Capabilities -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Scissors Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✂️</text></svg>">
   </head>
-  <body>
+  <body class="bg-slate-50 antialiased selection:bg-indigo-600 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

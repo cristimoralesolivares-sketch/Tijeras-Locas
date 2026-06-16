@@ -22,7 +22,10 @@ import {
   CalendarDays,
   Zap,
   BarChart3,
-  ListOrdered
+  ListOrdered,
+  Users,
+  UserPlus,
+  ShieldAlert
 } from 'lucide-react';
 import { SERVICES, BARBERS, WORK_HOURS, getTodaySantiago, getWorkingWeek } from '../data';
 import { Appointment, User as UserType, Service } from '../types';
@@ -49,6 +52,187 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
 
   // State to track simulated promotions spawned for low-demand hour gaps
   const [activePromotions, setActivePromotions] = useState<Array<{hour: string; discount: number; code: string}>>([]);
+
+  // Admin staff management states
+  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'staff'>('analytics');
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffPassword, setNewStaffPassword] = useState('');
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState<'barbero' | 'admin' | 'cliente'>('barbero');
+  const [staffActionMsg, setStaffActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false);
+
+  // Fetch all registered users via /api/admin/users
+  const fetchRegisteredUsers = async () => {
+    if (!isSupabaseConfigured) {
+      setRegisteredUsers([
+        { id: '1', name: 'Andrés (Admin)', email: 'andres@tijeraslocas.cl', phone: '+56911112222', role: 'admin', created_at: new Date().toISOString() },
+        { id: '2', name: 'Lissy', email: 'lissy@tijeraslocas.cl', phone: '+56994151797', role: 'barbero', created_at: new Date().toISOString() },
+        { id: '3', name: 'Meylin', email: 'meylin@tijeraslocas.cl', phone: '+56971088802', role: 'barbero', created_at: new Date().toISOString() }
+      ]);
+      return;
+    }
+    setIsLoadingUsers(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const token = session?.access_token || '';
+      
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok && data.users) {
+        setRegisteredUsers(data.users);
+      } else {
+        console.error('Error fetching users:', data.error);
+      }
+    } catch (err) {
+      console.error('Exception fetching users:', err);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && activeAdminTab === 'staff') {
+      fetchRegisteredUsers();
+    }
+  }, [activeAdminTab, isAdmin]);
+
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffEmail || !newStaffPassword || !newStaffName || !newStaffPhone) {
+      setStaffActionMsg({ text: 'Por favor complete todos los campos.', type: 'error' });
+      return;
+    }
+    
+    setIsSubmittingStaff(true);
+    setStaffActionMsg(null);
+    try {
+      if (!isSupabaseConfigured) {
+        const mockNewUser = {
+          id: `mock-${Date.now()}`,
+          name: newStaffName,
+          email: newStaffEmail,
+          phone: newStaffPhone,
+          role: newStaffRole,
+          created_at: new Date().toISOString()
+        };
+        setRegisteredUsers(prev => [mockNewUser, ...prev]);
+        setStaffActionMsg({ text: `[DEMO] Cuenta para ${newStaffName} creada con éxito.`, type: 'success' });
+        setNewStaffEmail('');
+        setNewStaffPassword('');
+        setNewStaffName('');
+        setNewStaffPhone('');
+        setIsSubmittingStaff(false);
+        return;
+      }
+
+      const session = (await supabase.auth.getSession()).data.session;
+      const token = session?.access_token || '';
+
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: newStaffEmail,
+          password: newStaffPassword,
+          name: newStaffName,
+          phone: newStaffPhone,
+          role: newStaffRole
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setStaffActionMsg({ text: `¡Cuenta para ${newStaffName} creada con éxito!`, type: 'success' });
+        setNewStaffEmail('');
+        setNewStaffPassword('');
+        setNewStaffName('');
+        setNewStaffPhone('');
+        fetchRegisteredUsers();
+      } else {
+        setStaffActionMsg({ text: `Error: ${data.error || 'No se pudo crear la cuenta.'}`, type: 'error' });
+      }
+    } catch (err: any) {
+      setStaffActionMsg({ text: `Error: ${err.message || err}`, type: 'error' });
+    } finally {
+      setIsSubmittingStaff(false);
+    }
+  };
+
+  const handleAutoSeedStaff = async () => {
+    setIsSubmittingStaff(true);
+    setStaffActionMsg(null);
+    const initialStaff = [
+      { email: 'andres@tijeraslocas.cl', password: 'Admin2026', name: 'Andrés', phone: '+56911112222', role: 'admin' },
+      { email: 'lissy@tijeraslocas.cl', password: 'Lissy2026', name: 'Lissy', phone: '+56994151797', role: 'barbero' },
+      { email: 'meylin@tijeraslocas.cl', password: 'Meylin2026', name: 'Meylin', phone: '+56971088802', role: 'barbero' }
+    ];
+
+    let successCount = 0;
+    let errors: string[] = [];
+
+    for (const staff of initialStaff) {
+      try {
+        if (!isSupabaseConfigured) {
+          successCount++;
+          continue;
+        }
+
+        const session = (await supabase.auth.getSession()).data.session;
+        const token = session?.access_token || '';
+
+        const response = await fetch('/api/admin/create-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(staff)
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          successCount++;
+        } else {
+          errors.push(`${staff.name}: ${data.error}`);
+        }
+      } catch (e: any) {
+        errors.push(`${staff.name}: ${e.message}`);
+      }
+    }
+
+    if (!isSupabaseConfigured) {
+      setRegisteredUsers(prev => [
+        { id: '1', name: 'Andrés', email: 'andres@tijeraslocas.cl', phone: '+56911112222', role: 'admin', created_at: new Date().toISOString() },
+        { id: '2', name: 'Lissy', email: 'lissy@tijeraslocas.cl', phone: '+56994151797', role: 'barbero', created_at: new Date().toISOString() },
+        { id: '3', name: 'Meylin', email: 'meylin@tijeraslocas.cl', phone: '+56971088802', role: 'barbero', created_at: new Date().toISOString() }
+      ]);
+      setStaffActionMsg({ text: 'Staff inicial restaurado en modo demo', type: 'success' });
+      setIsSubmittingStaff(false);
+      return;
+    }
+
+    if (successCount === 3) {
+      setStaffActionMsg({ text: '¡Se crearon las cuentas de Andrés, Lissy y Meylin de forma de fábrica!', type: 'success' });
+    } else {
+      setStaffActionMsg({
+        text: `Se crearon ${successCount}/3 cuentas. Errores: ${errors.join(', ')}`,
+        type: errors.length ? 'error' : 'success'
+      });
+    }
+    fetchRegisteredUsers();
+    setIsSubmittingStaff(false);
+  };
 
   // Restores state of the whole booking system (Appointments) to default
   const handleResetAppointments = () => {
@@ -195,6 +379,37 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
 
   const hourlyOccupancy = getHourlyOccupancy();
 
+  // Dynamic Real KPIs computed from Supabase Appointments State
+  const todayAptsCount = appointments.filter(a => a.date === selectedAgendaDay && a.status !== 'cancelled').length;
+  const completedTodayCount = appointments.filter(a => a.date === selectedAgendaDay && a.status === 'completed').length;
+  const revenueTodayValue = appointments
+    .filter(a => a.date === selectedAgendaDay && a.status === 'completed')
+    .reduce((sum, a) => sum + (a.service?.price || 0), 0);
+
+  const totalNonPending = appointments.filter(a => a.status === 'completed' || a.status === 'no-show').length;
+  const totalNoShows = appointments.filter(a => a.status === 'no-show').length;
+  const noShowRatePct = totalNonPending > 0 ? Math.round((totalNoShows / totalNonPending) * 100) : 0;
+
+  // Comparative distribution breakdown per professional staff member
+  const weeklyBarberStats = ['Andrés', 'Lissy', 'Meylin'].map(name => {
+    const barberApts = appointments.filter(a => a.professional === name);
+    const total = barberApts.length;
+    const completed = barberApts.filter(a => a.status === 'completed').length;
+    const pending = barberApts.filter(a => a.status === 'pending').length;
+    const noShow = barberApts.filter(a => a.status === 'no-show').length;
+    const revenue = barberApts
+      .filter(a => a.status === 'completed')
+      .reduce((sum, a) => sum + (a.service?.price || 0), 0);
+    return {
+      name,
+      total,
+      completed,
+      pending,
+      noShow,
+      revenue
+    };
+  });
+
   // Trigger quick university discount promo code for low occupancy hours
   const handleGeneratePromoForHour = (hour: string) => {
     const code = `HAPPY-${hour.replace(':', '')}-${Math.floor(10 + Math.random() * 90)}`;
@@ -226,15 +441,30 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
           </p>
         </div>
 
+        {/* Quick Admin sub-tabs to switch between metrics and staff list */}
         {isAdmin && (
-          <div className="flex gap-2 shrink-0 z-10">
+          <div className="flex bg-slate-100 p-1 border border-slate-200 rounded-xl gap-1 shrink-0 z-10 shadow-inner">
             <button
-              onClick={handleResetAppointments}
-              className="px-4 py-2 bg-slate-50 border border-slate-250 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl text-xs uppercase tracking-wider font-sans font-black transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
-              title="Restaurar de fábrica las citas para demostración limpia"
+              type="button"
+              onClick={() => setActiveAdminTab('analytics')}
+              className={`px-4 py-2 text-xs font-mono font-bold uppercase rounded-lg transition-all cursor-pointer ${
+                activeAdminTab === 'analytics'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Limpiar Entorno</span>
+              📊 Métricas y BI
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveAdminTab('staff')}
+              className={`px-4 py-2 text-xs font-mono font-bold uppercase rounded-lg transition-all cursor-pointer ${
+                activeAdminTab === 'staff'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              👥 Gestionar Staff
             </button>
           </div>
         )}
@@ -244,187 +474,396 @@ export const ProDashboard: React.FC<ProDashboardProps> = ({
       {isAdmin ? (
         <div className="space-y-6" id="admin-bi-suite">
           
-          <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
-            <BarChart3 className="w-5 h-5 text-indigo-700" />
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
-              Inteligencia de Negocios (KPIs Andrés)
-            </h3>
-          </div>
-
-          {/* KPI grid row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* 1. TEAM PERFORMANCE KPI CARD */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-indigo-600 flex flex-col justify-between text-left space-y-4 shadow-sm">
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono tracking-widest text-[#4f46e5] uppercase font-black block">
-                  Rendimiento del Equipo (Sillas)
-                </span>
-                <p className="text-xs text-slate-600 font-bold font-sans leading-relaxed">
-                  Citas completadas e ingresos generados acumulados.
-                </p>
+          {activeAdminTab === 'analytics' ? (
+            <>
+              <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                <BarChart3 className="w-5 h-5 text-indigo-705" />
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
+                  Inteligencia de Negocios en Tiempo Real (Santiago)
+                </h3>
               </div>
 
-              {/* Responsive comparison graph */}
-              <div className="space-y-3 pt-2">
-                {teamPerformance.map(perf => {
-                  const maxRevenue = Math.max(...teamPerformance.map(p => p.revenue), 1);
-                  const barPercentage = Math.round((perf.revenue / maxRevenue) * 100);
-                  return (
-                    <div key={perf.name} className="space-y-1">
-                      <div className="flex justify-between text-[11px] font-sans font-semibold">
-                        <span className="text-slate-900 font-extrabold">{perf.name}</span>
-                        <span className="text-slate-600">
-                          {perf.completedCount} completadas • <strong className="text-emerald-750">${perf.revenue.toLocaleString('es-CL')}</strong>
-                        </span>
-                      </div>
-                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                        <div 
-                          className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
-                          style={{ width: `${Math.max(5, barPercentage)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px] font-sans text-slate-700">
-                ⭐ Líder esta semana: <strong className="text-slate-950 font-black">{
-                  teamPerformance.reduce((prev, current) => (prev.revenue > current.revenue) ? prev : current).name
-                }</strong>
-              </div>
-            </div>
-
-            {/* 2. SERVICES DEMAND ANALYTICS */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-violet-600 flex flex-col justify-between text-left space-y-4 shadow-sm">
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono tracking-widest text-violet-700 uppercase font-black block">
-                  Demanda de Servicios
-                </span>
-                <p className="text-xs text-slate-600 font-bold font-sans leading-relaxed">
-                  Identifica qué cortes son más populares en el campus.
-                </p>
-              </div>
-
-              {/* Ranks analysis rendering with graphical indicators */}
-              <div className="space-y-3">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] font-mono text-emerald-800 font-black uppercase block">🔥 MÁS SOLICITADO</span>
-                    <span className="text-xs font-black text-slate-900 truncate max-w-[160px] block">{mostRequested?.serviceName}</span>
-                  </div>
-                  <span className="text-xs font-mono font-black text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                    {mostRequested?.timesBooked} citas
-                  </span>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] font-mono text-indigo-750 font-black uppercase block">💤 MENOS SOLICITADO</span>
-                    <span className="text-xs font-semibold text-slate-800 truncate max-w-[160px] block">{leastRequested?.serviceName}</span>
-                  </div>
-                  <span className="text-xs font-mono font-black text-indigo-750 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
-                    {leastRequested?.timesBooked} citas
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-[11px] font-sans text-slate-600 leading-relaxed font-semibold">
-                💡 Tip de Andrés: Incentiva {leastRequested?.serviceName || 'otros servicios'} publicando promociones rápidas.
-              </p>
-            </div>
-
-            {/* 3. HOURS OPTIMIZATION HEATMAP & GAP RECOMMENDATIONS */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-blue-650 flex flex-col justify-between text-left space-y-4 shadow-sm">
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono tracking-widest text-blue-700 uppercase font-black block">
-                  Optimización de Cuchillas
-                </span>
-                <p className="text-xs text-slate-600 font-bold font-sans leading-relaxed">
-                  Lanza un Happy Hour para ocupar las horas vacías de hoy.
-                </p>
-              </div>
-
-              {/* Heatmap summary indicator */}
-              <div className="grid grid-cols-5 gap-1.5 pt-1">
-                {hourlyOccupancy.map(occ => {
-                  let colorClass = 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50';
-                  if (occ.chairsBooked === 1) colorClass = 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black';
-                  if (occ.chairsBooked === 2) colorClass = 'bg-indigo-100 border-indigo-300 text-indigo-805 font-black';
-                  if (occ.chairsBooked === 3) colorClass = 'bg-indigo-600 border-indigo-700 text-white font-black';
-
-                  return (
-                    <div 
-                      key={occ.hour} 
-                      className={`py-1.5 border font-mono text-[9px] font-black text-center rounded-lg relative group transition-all shadow-sm ${colorClass}`}
-                      title={`${occ.chairsBooked}/3 Barberos reservados a las ${occ.hour}`}
-                    >
-                      <span>{occ.hour}</span>
-                      {occ.chairsBooked === 0 && (
-                        <div className="absolute top-[2px] right-[2px] w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="space-y-1.5 pt-2">
-                <span className="text-[11px] text-slate-700 font-sans font-bold block">Próxima hora libre: <strong className="text-emerald-700 font-black">{
-                  hourlyOccupancy.find(o => o.chairsBooked === 0)?.hour || 'Todo ocupado'
-                } hrs</strong></span>
+              {/* Real calculated KPIs requested by user */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                {/* Simulated promotional launch trigger */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const firstEmpty = hourlyOccupancy.find(o => o.chairsBooked === 0);
-                    if (firstEmpty) {
-                      handleGeneratePromoForHour(firstEmpty.hour);
-                    } else {
-                      alert('¡Todos los bloques están tomados hoy!');
-                    }
-                  }}
-                  className="w-full py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider font-mono hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                {/* 1. REAL DAILY REVENUE */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-indigo-600 flex flex-col justify-between text-left space-y-4 shadow-sm font-medium">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono tracking-widest text-[#4f46e5] uppercase font-black block">
+                      Ingresos de Hoy ({selectedAgendaDay})
+                    </span>
+                    <h3 className="text-3xl font-black text-slate-950 font-mono tracking-tight">
+                      ${revenueTodayValue.toLocaleString('es-CL')} <span className="text-xs text-slate-500 font-sans font-medium">CLP</span>
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-sans font-semibold">
+                    Calculado en tiempo real a partir de todas las citas ya marcadas como completadas hoy.
+                  </p>
+                </div>
+
+                {/* 2. COMPLETED APPOINTMENTS COUNT */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-emerald-605 border-l-emerald-600 flex flex-col justify-between text-left space-y-4 shadow-sm font-medium">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono tracking-widest text-emerald-800 uppercase font-black block">
+                      Citas Atendidas Hoy
+                    </span>
+                    <h3 className="text-3xl font-black text-slate-950 font-mono tracking-tight">
+                      {completedTodayCount} <span className="text-xs text-slate-500 font-sans font-medium">de {todayAptsCount}</span>
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-sans font-semibold">
+                    Visualiza y controla el avance de tu agenda en el Barrio Universitario hoy.
+                  </p>
+                </div>
+
+                {/* 3. NO-SHOW RATE */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-rose-500 flex flex-col justify-between text-left space-y-4 shadow-sm font-medium">
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-mono tracking-widest text-rose-650 uppercase font-black block">
+                      Tasa de No-Show Histórica
+                    </span>
+                    <h3 className="text-3xl font-black text-rose-600 font-mono tracking-tight">
+                      {noShowRatePct}%
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-sans font-semibold">
+                    Porcentaje de clientes que reservaron un horario y no se presentaron a la barbería.
+                  </p>
+                </div>
+
+              </div>
+
+              {/* WEEKLY APPOINTMENT GRAPH PER BARBER */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-2">
+                
+                {/* Visual Chart layout */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                  <h4 className="text-xs font-black text-slate-950 uppercase tracking-wider font-sans border-b border-indigo-50 pb-2">
+                    📊 Distribución Semanal de Citas por Barbero
+                  </h4>
+                  
+                  <div className="space-y-5 py-2">
+                    {weeklyBarberStats.map((perf) => {
+                      return (
+                        <div key={perf.name} className="space-y-2 text-left">
+                          <div className="flex justify-between items-center text-[10px] font-mono font-black uppercase">
+                            <span className="text-slate-900 font-sans">💈 {perf.name}</span>
+                            <span className="text-slate-500">
+                              {perf.total} cita(s) • <span className="text-emerald-705 font-bold text-emerald-600">${perf.revenue.toLocaleString('es-CL')}</span>
+                            </span>
+                          </div>
+                          
+                          {/* Progress composite bar graphs for completed, pending, and no-shows */}
+                          <div className="h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex shadow-inner border border-slate-200">
+                            {perf.total === 0 ? (
+                              <div className="flex items-center justify-center w-full text-[9px] text-slate-500 font-sans font-semibold">
+                                Sin citas agendadas aún
+                              </div>
+                            ) : (
+                              <>
+                                <div 
+                                  style={{ width: `${(perf.completed / perf.total) * 100}%` }} 
+                                  className="bg-emerald-500 h-full flex items-center justify-center text-[9px] text-white font-mono font-bold"
+                                  title={`${perf.completed} Completados`}
+                                >
+                                  {perf.completed > 0 && perf.completed}
+                                </div>
+                                <div 
+                                  style={{ width: `${(perf.pending / perf.total) * 100}%` }} 
+                                  className="bg-amber-500 h-full flex items-center justify-center text-[9px] text-slate-950 font-mono font-bold"
+                                  title={`${perf.pending} Pendientes`}
+                                >
+                                  {perf.pending > 0 && perf.pending}
+                                </div>
+                                <div 
+                                  style={{ width: `${(perf.noShow / perf.total) * 100}%` }} 
+                                  className="bg-slate-400 h-full flex items-center justify-center text-[9px] text-white font-mono font-bold"
+                                  title={`${perf.noShow} Faltó`}
+                                >
+                                  {perf.noShow > 0 && perf.noShow}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-center gap-3 text-[8.5px] font-mono uppercase bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span className="flex items-center gap-1 font-bold text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block" /> Completado
+                    </span>
+                    <span className="flex items-center gap-1 font-bold text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded bg-amber-500 inline-block" /> Pendiente
+                    </span>
+                    <span className="flex items-center gap-1 font-bold text-slate-700">
+                      <span className="w-2.5 h-2.5 rounded bg-slate-400 inline-block" /> Faltó
+                    </span>
+                  </div>
+                </div>
+
+                {/* Demand Heatmap */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4 text-left">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-black text-slate-950 uppercase tracking-wider font-sans">
+                      ⏰ Optimizador de Sillas Vacías
+                    </h4>
+                    <span className="text-[9px] font-mono bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded">
+                      Promo Trigger
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-600 font-medium font-sans leading-relaxed">
+                    Las horas críticas con baja ocupación se listan abajo en base a los barberos libres de tu staff. Haz clic en "Promo" para gatillar su respectivo descuento.
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1.5">
+                    {hourlyOccupancy.map((occ) => {
+                      const isLow = occ.chairsBooked < 2;
+                      return (
+                        <div 
+                          key={occ.hour} 
+                          className={`p-2.5 rounded-xl border flex flex-col justify-between text-left transition-all ${
+                            isLow 
+                              ? 'bg-rose-50/40 border-rose-200' 
+                              : 'bg-indigo-50/20 border-indigo-100'
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <span className="text-[11px] font-mono font-black text-slate-900 block">{occ.hour} hrs</span>
+                            <span className="text-[9px] text-slate-500 font-sans font-bold block">{occ.chairsBooked}/3 Sillas</span>
+                          </div>
+                          
+                          {isLow ? (
+                            <button
+                              type="button"
+                              onClick={() => handleGeneratePromoForHour(occ.hour)}
+                              className="w-full mt-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[8.5px] font-black font-sans uppercase transition-colors uppercase tracking-wider cursor-pointer"
+                            >
+                              🔖 Promo
+                            </button>
+                          ) : (
+                            <span className="text-[8.5px] text-indigo-600 font-bold uppercase tracking-wider text-center block mt-2 pt-1">
+                              Ocupado 👍
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+              
+              {/* Active coupon prompts bar */}
+              {activePromotions.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl text-left space-y-2.5 shadow-sm"
                 >
-                  <Zap className="w-3 h-3 animate-bounce" />
-                  <span>Automatizar Happy Hour</span>
-                </button>
+                  <span className="text-[9.5px] font-mono tracking-widest text-[#4f46e5] font-black block">
+                    PROMOCIONES ESCOLARES ACTIVAS EN TIEMPO REAL
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {activePromotions.map((promo, idx) => (
+                      <div key={idx} className="bg-white border-2 border-indigo-200 px-3.5 py-2 rounded-xl text-[10.5px] font-sans font-bold space-y-1 shadow-sm">
+                        <span className="text-slate-900 block">Código: <strong className="text-indigo-700 font-mono font-black tracking-widest">{promo.code}</strong></span>
+                        <span className="text-emerald-700 block">🔖 -20% en Bloque Horario {promo.hour} hrs</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </>
+          ) : (
+            // STAFF WORKSPACE TAB: CREATE STAFF ACCOUNTS AND VIEW SIGNED UP USERS
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6" id="staff-workspace-admin">
+              
+              {/* Left Column: Form to create a staff member */}
+              <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center space-x-2 border-b border-slate-150 pb-2">
+                  <UserPlus className="w-4 h-4 text-indigo-600" />
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider font-sans">
+                    Registrar Miembro del Staff
+                  </h4>
+                </div>
+                
+                <p className="text-[10.5px] text-slate-650 leading-relaxed font-sans font-semibold">
+                  Crea cuentas de barberos y administradores sin tener que acceder al dashboard oficial de Supabase. El sistema asignará el rol en su metadata de forma segura a través del servidor.
+                </p>
+
+                <form onSubmit={handleCreateStaff} className="space-y-3.5 pt-2 text-left">
+                  <div>
+                    <label className="text-[9.5px] font-mono font-black text-slate-600 uppercase block mb-1">Nombre Completo</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Ej. Andrés Silva"
+                      value={newStaffName}
+                      onChange={e => setNewStaffName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-medium hover:bg-slate-100/55 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9.5px] font-mono font-black text-slate-600 uppercase block mb-1">Correo Electrónico (Staff)</label>
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="Ej. andres@tijeraslocas.cl"
+                      value={newStaffEmail}
+                      onChange={e => setNewStaffEmail(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-medium hover:bg-slate-100/55 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9.5px] font-mono font-black text-slate-600 uppercase block mb-1">Teléfono Móvil (+569...)</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Ej. +56911223344"
+                      value={newStaffPhone}
+                      onChange={e => setNewStaffPhone(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-medium hover:bg-slate-100/55 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9.5px] font-mono font-black text-slate-600 uppercase block mb-1">Contraseña de Acceso</label>
+                    <input 
+                      type="password" 
+                      required
+                      minLength={6}
+                      placeholder="Mínimo 6 caracteres"
+                      value={newStaffPassword}
+                      onChange={e => setNewStaffPassword(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-medium hover:bg-slate-100/55 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 focus:bg-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9.5px] font-mono font-black text-slate-600 uppercase block mb-1">Rol en el Local</label>
+                    <select
+                      value={newStaffRole}
+                      onChange={e => setNewStaffRole(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-sans font-bold hover:bg-slate-100/55 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 focus:bg-white outline-none"
+                    >
+                      <option value="barbero">Barbero Especialista (Silla)</option>
+                      <option value="admin">Administrador General</option>
+                      <option value="cliente">Cliente Regular</option>
+                    </select>
+                  </div>
+
+                  {staffActionMsg && (
+                    <div className={`p-3 rounded-xl border text-[11px] font-sans font-bold ${
+                      staffActionMsg.type === 'success' 
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                        : 'bg-rose-50 border-rose-200 text-rose-800'
+                    }`}>
+                      {staffActionMsg.text}
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingStaff}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-400 text-white rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow"
+                    >
+                      {isSubmittingStaff ? 'Registrando en Supabase...' : '➕ Registrar Cuenta Staff'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleAutoSeedStaff}
+                      disabled={isSubmittingStaff}
+                      className="w-full py-2 bg-slate-50 border border-slate-200 text-slate-705 hover:bg-slate-100 hover:text-slate-900 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider transition-all cursor-pointer"
+                      title="Registra inmediatamente Andrés, Lissy y Meylin con sus contraseñas por defecto"
+                    >
+                      ⚡ Crear Andrés, Lissy y Meylin (1-Clic)
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Column: List of all users registered */}
+              <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-150 pb-2">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider font-sans">
+                      Lista de Usuarios Registrados
+                    </h4>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={fetchRegisteredUsers}
+                    className="p-1 px-2.5 hover:bg-slate-100 rounded-lg text-[9px] font-mono uppercase bg-slate-50 border border-slate-250 font-extrabold text-[#4f46e5] cursor-pointer"
+                  >
+                    Actualizar
+                  </button>
+                </div>
+
+                {isLoadingUsers ? (
+                  <div className="py-20 flex flex-col items-center justify-center space-y-2">
+                    <div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+                    <span className="text-[10px] font-mono text-slate-500 uppercase font-black">Cargando cuentas...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1 flex flex-col">
+                    {registeredUsers.length === 0 ? (
+                      <p className="py-12 text-center text-xs text-slate-500 font-bold">No se han recuperado cuentas de usuario de la DB aún. Haz clic en "Actualizar" o "Crear Andrés, Lissy y Meylin" para inicializar el staff.</p>
+                    ) : (
+                      registeredUsers.map((u: any) => {
+                        const rolesColors = {
+                          admin: 'bg-indigo-50 border-indigo-200 text-indigo-700 font-black',
+                          barbero: 'bg-emerald-50 border-emerald-250 text-emerald-800 font-bold',
+                          cliente: 'bg-slate-50 border-slate-200 text-slate-600'
+                        };
+                        return (
+                          <div 
+                            key={u.id}
+                            className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-4 text-left hover:bg-slate-100/50 transition-colors"
+                          >
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="text-xs font-black text-slate-900 uppercase block truncate">
+                                {u.name}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-500 block truncate">
+                                📩 {u.email}
+                              </span>
+                              <span className="text-[9.5px] font-mono text-indigo-650 block">
+                                📞 {u.phone}
+                              </span>
+                            </div>
+                            
+                            <div className="text-right shrink-0">
+                              <span className={`px-2 py-0.5 rounded-lg border text-[8px] font-mono tracking-widest uppercase block text-center ${
+                                rolesColors[u.role as keyof typeof rolesColors] || rolesColors.cliente
+                              }`}>
+                                {u.role === 'admin' ? 'ADMINISTRADOR' : u.role === 'barbero' ? 'BARBERO' : 'CLIENTE'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
 
             </div>
-
-          </div>
-
-          {/* Spawned promotions slider listing generated coupons dynamically */}
-          {activePromotions.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="bg-indigo-50 p-4 border border-dashed border-indigo-200 rounded-2xl text-left space-y-3"
-            >
-              <div className="flex items-center gap-2 text-xs font-black text-indigo-900 uppercase">
-                <CheckCircle className="w-4 h-4 text-indigo-700 animate-pulse" />
-                <span>Happy Hour Activado en el Campus Universitario (Prueba Real)</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {activePromotions.map((promo, idx) => (
-                  <div key={idx} className="bg-white border-2 border-indigo-200 px-3.5 py-2 rounded-xl text-[10.5px] font-sans font-bold space-y-1 shadow-sm">
-                    <span className="text-slate-900 block">Código: <strong className="text-indigo-700 font-mono font-black tracking-widest">{promo.code}</strong></span>
-                    <span className="text-emerald-700 block">🔖 -20% en Bloque Horario {promo.hour} hrs</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
           )}
 
         </div>
       ) : (
         /* LOCK WARNING STATS IN PRO WORKER DISALLOW FINANCIAL EXPOSURE */
         <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl flex items-center space-x-3 text-left">
-          <AlertCircle className="w-5 h-5 text-slate-550 shrink-0" />
+          <AlertCircle className="w-5 h-5 text-slate-500 shrink-0" />
           <p className="text-[11px] font-sans font-bold text-slate-700 uppercase tracking-wide">
-            🔒 Panel Financiero restringido para el empleado actual ({currentUser.name}). Sólo disponible para Andrés.
+            🔒 Panel Financiero y de Personal restringido para el empleado actual ({currentUser.name}). Sólo disponible para Andrés.
           </p>
         </div>
       )}
