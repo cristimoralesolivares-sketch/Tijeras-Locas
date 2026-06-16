@@ -24,13 +24,15 @@ import {
   Flame,
   CheckCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Database
 } from 'lucide-react';
 import { ProDashboard } from './components/ProDashboard';
 import { ClientBooking } from './components/ClientBooking';
 import { Appointment, User as UserType } from './types';
 import { INITIAL_APPOINTMENTS } from './data';
 import { getSupabaseAppointments } from './supabaseHelpers';
+import { isSupabaseConfigured } from './supabaseClient';
 
 // Safe localStorage helpers to prevent SecurityError exceptions in sandboxed iframes/environments
 const safeGetItem = (key: string): string | null => {
@@ -338,10 +340,21 @@ export default function App() {
             </div>
 
             {/* CLT Real-Time clock representation for Chile alignment */}
-            <div className="hidden lg:flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="timezone-badge">
-              <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
-              <span className="text-[10px] font-mono tracking-wider text-indigo-700 font-extrabold">HORARIO SANTIAGO:</span>
-              <span className="text-xs font-mono font-black text-slate-900">{cltTime || '12:00:00 CLT'}</span>
+            <div className="hidden sm:flex items-center space-x-4">
+              <div className="hidden lg:flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="timezone-badge">
+                <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
+                <span className="text-[10px] font-mono tracking-wider text-indigo-700 font-extrabold">HORARIO SANTIAGO:</span>
+                <span className="text-xs font-mono font-black text-slate-900">{cltTime || '12:00:00 CLT'}</span>
+              </div>
+
+              {/* Database Connection Status Badge */}
+              <div className="flex items-center space-x-2 bg-slate-100 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shadow-sm" id="db-connection-badge">
+                <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured ? 'text-emerald-500 ' : 'text-amber-500'}`} />
+                <span className="text-[10px] font-mono tracking-wider text-slate-755 font-extrabold">BASE DE DATOS:</span>
+                <span className={`text-[10px] font-sans font-black px-1.5 py-0.5 rounded ${isSupabaseConfigured ? 'text-emerald-700 bg-emerald-50/80' : 'text-amber-700 bg-amber-50/80'}`}>
+                  {isSupabaseConfigured ? 'Conectado' : 'Local / Demo'}
+                </span>
+              </div>
             </div>
 
             {/* Right side: User Session indicators & Logout */}
