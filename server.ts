@@ -14,7 +14,10 @@ async function startServer() {
     res.json({ status: 'ok', service: 'Tijeras Locas' });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  // Treat as production if NODE_ENV is 'production' OR if running on Render (process.env.RENDER) OR if NODE_ENV is unset (such as production servers)
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER || !process.env.NODE_ENV;
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
